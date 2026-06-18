@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../utils/constants.dart';
 import '../utils/theme.dart';
 
@@ -52,7 +51,7 @@ class _EquipmentPickerState extends State<EquipmentPicker> {
           child: Row(
             children: [
               const Icon(
-                FontAwesomeIcons.tools,
+                Icons.build,
                 size: 16,
                 color: AppTheme.textSecondaryColor,
               ),
@@ -96,7 +95,7 @@ class _EquipmentPickerState extends State<EquipmentPicker> {
                 const SizedBox(width: 12),
 
                 Icon(
-                  FontAwesomeIcons.chevronDown,
+                  Icons.expand_more,
                   size: 16,
                   color: widget.enabled
                       ? AppTheme.textSecondaryColor
@@ -183,7 +182,7 @@ class _EquipmentPickerState extends State<EquipmentPicker> {
                       children: [
                         Text('Seleccionar Equipo', style: AppTheme.heading3),
                         IconButton(
-                          icon: const Icon(FontAwesomeIcons.times),
+                          icon: const Icon(Icons.close),
                           onPressed: () => Navigator.pop(context),
                           color: AppTheme.textColor,
                         ),
@@ -216,7 +215,7 @@ class _EquipmentPickerState extends State<EquipmentPicker> {
                           ),
                           border: InputBorder.none,
                           icon: Icon(
-                            FontAwesomeIcons.search,
+                            Icons.search,
                             size: 16,
                             color: AppTheme.textSecondaryColor,
                           ),
@@ -252,7 +251,7 @@ class _EquipmentPickerState extends State<EquipmentPicker> {
                           ),
                           trailing: isSelected
                               ? const Icon(
-                                  FontAwesomeIcons.check,
+                                  Icons.check,
                                   color: AppTheme.primaryColor,
                                   size: 16,
                                 )
@@ -513,7 +512,7 @@ class _EquipmentCategoryPickerState extends State<EquipmentCategoryPicker> {
             child: Row(
               children: [
                 const Icon(
-                  FontAwesomeIcons.checkCircle,
+                  Icons.check_circle,
                   color: AppTheme.accentColor,
                   size: 20,
                 ),

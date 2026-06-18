@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "844270208896",
+    "project_id": "cutberto",
+    "storage_bucket": "cutberto.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:844270208896:android:c33e19cd0b40ace607a365",
+        "android_client_info": {
+          "package_name": "com.example.agenda_flutter"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCL7uv_MmijNFoG-DvL86VoRbg6j2KJ_aU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

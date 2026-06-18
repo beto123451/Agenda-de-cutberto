@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../models/recordatorio.dart';
 import '../utils/theme.dart';
 import '../utils/date_utils.dart' as date_util;
@@ -100,7 +99,7 @@ class RecordatorioCard extends StatelessWidget {
           Row(
             children: [
               Icon(
-                FontAwesomeIcons.tools,
+                Icons.build,
                 color: AppTheme.textSecondaryColor,
                 size: 16,
               ),
@@ -122,7 +121,7 @@ class RecordatorioCard extends StatelessWidget {
           Row(
             children: [
               Icon(
-                FontAwesomeIcons.calendarAlt,
+                Icons.calendar_month,
                 color: AppTheme.textSecondaryColor,
                 size: 16,
               ),
@@ -141,19 +140,19 @@ class RecordatorioCard extends StatelessWidget {
           // Información adicional
           if (recordatorio.telefono.isNotEmpty)
             _buildInfoRow(
-              icon: FontAwesomeIcons.phone,
+              icon: Icons.phone,
               text: recordatorio.telefono,
             ),
 
           if (recordatorio.ubicacion.isNotEmpty)
             _buildInfoRow(
-              icon: FontAwesomeIcons.mapMarkerAlt,
+              icon: Icons.location_on,
               text: recordatorio.ubicacion,
             ),
 
           if (recordatorio.observaciones.isNotEmpty)
             _buildInfoRow(
-              icon: FontAwesomeIcons.stickyNote,
+              icon: Icons.note,
               text: 'Observaciones: ${recordatorio.observaciones}',
               maxLines: 2,
             ),
@@ -241,8 +240,8 @@ class RecordatorioCard extends StatelessWidget {
                   IconButton(
                     icon: Icon(
                       recordatorio.alarmaProgramada
-                          ? FontAwesomeIcons.bell
-                          : FontAwesomeIcons.bellSlash,
+                          ? Icons.notifications
+                          : Icons.notifications_off,
                       size: 16,
                       color: recordatorio.alarmaProgramada
                           ? AppTheme.accentColor
@@ -255,7 +254,7 @@ class RecordatorioCard extends StatelessWidget {
 
                 if (onEdit != null)
                   IconButton(
-                    icon: const Icon(FontAwesomeIcons.edit, size: 16),
+                    icon: const Icon(Icons.edit, size: 16),
                     onPressed: onEdit,
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
@@ -299,8 +298,8 @@ class RecordatorioCard extends StatelessWidget {
           IconButton(
             icon: Icon(
               recordatorio.alarmaProgramada
-                  ? FontAwesomeIcons.bell
-                  : FontAwesomeIcons.bellSlash,
+                  ? Icons.notifications
+                  : Icons.notifications_off,
               size: 18,
               color: recordatorio.alarmaProgramada
                   ? AppTheme.accentColor
@@ -314,14 +313,14 @@ class RecordatorioCard extends StatelessWidget {
 
         if (onEdit != null)
           IconButton(
-            icon: const Icon(FontAwesomeIcons.edit, size: 18),
+            icon: const Icon(Icons.edit, size: 18),
             onPressed: onEdit,
             tooltip: 'Editar',
           ),
 
         if (onDelete != null)
           IconButton(
-            icon: const Icon(FontAwesomeIcons.trashAlt, size: 18),
+            icon: const Icon(Icons.delete, size: 18),
             onPressed: onDelete,
             tooltip: 'Eliminar',
           ),
@@ -408,7 +407,7 @@ class _SelectableRecordatorioCardState
               ),
               child: _isSelected
                   ? const Icon(
-                      FontAwesomeIcons.check,
+                      Icons.check,
                       size: 14,
                       color: AppTheme.secondaryColor,
                     )

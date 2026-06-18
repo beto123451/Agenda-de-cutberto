@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../utils/theme.dart';
 
 class WelcomeCard extends StatelessWidget {
@@ -69,7 +68,7 @@ class WelcomeCard extends StatelessWidget {
                       ],
                     ),
                     child: const Icon(
-                      FontAwesomeIcons.userTie,
+                      Icons.person,
                       color: AppTheme.primaryColor,
                       size: 30,
                     ),
@@ -151,7 +150,7 @@ class WelcomeCard extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       const Icon(
-                        FontAwesomeIcons.solidCircle,
+                        Icons.radio_button_checked,
                         size: 8,
                         color: AppTheme.accentColor,
                       ),
@@ -196,21 +195,21 @@ class WelcomeCard extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
                   _buildStatItem(
-                    icon: FontAwesomeIcons.calendarCheck,
+                    icon: Icons.event_available,
                     value: pendingCount,
                     label: 'Pendientes',
                     color: AppTheme.successColor,
                   ),
 
                   _buildStatItem(
-                    icon: FontAwesomeIcons.clock,
+                    icon: Icons.schedule,
                     value: upcomingCount,
                     label: 'Próximos',
                     color: AppTheme.warningColor,
                   ),
 
                   _buildStatItem(
-                    icon: FontAwesomeIcons.users,
+                    icon: Icons.group,
                     value: totalCount,
                     label: 'Total',
                     color: AppTheme.primaryColor,
@@ -233,7 +232,7 @@ class WelcomeCard extends StatelessWidget {
             child: Row(
               children: [
                 Icon(
-                  FontAwesomeIcons.lightbulb,
+                  Icons.lightbulb,
                   color: AppTheme.accentColor,
                   size: 16,
                 ),
@@ -371,7 +370,7 @@ class CompactWelcomeCard extends StatelessWidget {
             const SizedBox(width: 4),
 
             const Icon(
-              FontAwesomeIcons.chevronDown,
+              Icons.expand_more,
               size: 12,
               color: AppTheme.textSecondaryColor,
             ),

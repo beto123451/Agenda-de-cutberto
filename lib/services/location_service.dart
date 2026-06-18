@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import '../models/ubicacion.dart';
@@ -8,7 +9,7 @@ class LocationService {
     try {
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
-        print('Servicio de ubicación deshabilitado');
+        debugPrint('Servicio de ubicación deshabilitado');
         return null;
       }
 
@@ -16,13 +17,13 @@ class LocationService {
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
         if (permission == LocationPermission.denied) {
-          print('Permiso de ubicación denegado');
+          debugPrint('Permiso de ubicación denegado');
           return null;
         }
       }
 
       if (permission == LocationPermission.deniedForever) {
-        print('Permiso de ubicación permanentemente denegado');
+        debugPrint('Permiso de ubicación permanentemente denegado');
         return null;
       }
 
@@ -30,7 +31,7 @@ class LocationService {
         desiredAccuracy: LocationAccuracy.high,
       );
     } catch (e) {
-      print('Error al obtener ubicación: $e');
+      debugPrint('Error al obtener ubicación: $e');
       return null;
     }
   }
@@ -41,7 +42,7 @@ class LocationService {
       List<Location> locations = await locationFromAddress(direccion);
 
       if (locations.isEmpty) {
-        print('No se encontraron coordenadas para: $direccion');
+        debugPrint('No se encontraron coordenadas para: $direccion');
         return null;
       }
 
@@ -64,7 +65,7 @@ class LocationService {
         fechaActualizacion: DateTime.now(),
       );
     } catch (e) {
-      print('Error en geocoding: $e');
+      debugPrint('Error en geocoding: $e');
       return null;
     }
   }
@@ -81,7 +82,7 @@ class LocationService {
       Placemark place = placemarks.first;
       return '${place.street}, ${place.postalCode} ${place.locality}, ${place.country}';
     } catch (e) {
-      print('Error en reverse geocoding: $e');
+      debugPrint('Error en reverse geocoding: $e');
       return null;
     }
   }

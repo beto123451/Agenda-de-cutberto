@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:provider/provider.dart';
 
 import '../models/recordatorio.dart';
@@ -45,6 +44,7 @@ class _AddRecordatorioScreenState extends State<AddRecordatorioScreen> {
     _telefonoController.dispose();
     _emailController.dispose();
     _observacionesController.dispose();
+    _ubicacionTextController.dispose();
     super.dispose();
   }
 
@@ -160,28 +160,134 @@ class _AddRecordatorioScreenState extends State<AddRecordatorioScreen> {
     return null;
   }
 
-  Future<void> _saveRecordatorio() async {
-    if (!_formKey.currentState!.validate()) return;
-    if (_fechaServicio == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Por favor selecciona una fecha de servicio'),
-          backgroundColor: AppTheme.errorColor,
-        ),
-      );
-      return;
+  /// Valida todos los campos obligatorios y retorna una lista de campos faltantes
+  List<String> _validarCamposObligatorios() {
+    final camposFaltantes = <String>[];
+
+    // Validar cliente
+    if (_clienteController.text.trim().isEmpty) {
+      camposFaltantes.add('👤 Nombre del Cliente');
     }
 
-    // Validar que al menos una ubicación esté especificada
-    if (_ubicacionTextController.text.trim().isEmpty && _ubicacion.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Por favor especifica una ubicación (texto o mapa)'),
-          backgroundColor: AppTheme.errorColor,
-        ),
-      );
-      return;
+    // Validar equipo
+    if (_selectedEquipment.isEmpty) {
+      camposFaltantes.add('🔧 Equipo');
     }
+
+    // Validar frecuencia
+    if (_selectedFrequency.isEmpty) {
+      camposFaltantes.add('⏱️ Frecuencia');
+    }
+
+    // Validar fecha de servicio
+    if (_fechaServicio == null) {
+      camposFaltantes.add('📅 Fecha de Servicio');
+    }
+
+    // Validar ubicación (texto o mapa)
+    if (_ubicacionTextController.text.trim().isEmpty && _ubicacion.isEmpty) {
+      camposFaltantes.add('📍 Ubicación (texto o mapa)');
+    }
+
+    return camposFaltantes;
+  }
+
+  /// Muestra un diálogo con los campos que faltan y retorna true si continuar, false si cancelar
+  Future<bool> _mostrarAlertaCamposFaltantes(List<String> camposFaltantes) async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppTheme.surfaceColor,
+        icon: const Icon(
+          Icons.warning,
+          color: AppTheme.errorColor,
+          size: 32,
+        ),
+        title: const Text(
+          '⚠️ Campos Faltantes',
+          style: TextStyle(color: AppTheme.textColor),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Los siguientes campos no están completos:',
+              style: TextStyle(color: AppTheme.textSecondaryColor),
+            ),
+            const SizedBox(height: 16),
+            ...camposFaltantes.map((campo) {
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.radio_button_checked,
+                      size: 6,
+                      color: AppTheme.errorColor,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        campo,
+                        style: const TextStyle(
+                          color: AppTheme.textColor,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+            const SizedBox(height: 16),
+            const Text(
+              '¿Deseas continuar de todas formas?',
+              style: TextStyle(
+                color: AppTheme.textSecondaryColor,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, false),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.surfaceColor,
+              side: const BorderSide(color: AppTheme.primaryColor),
+            ),
+            child: const Text(
+              'Cancelar',
+              style: TextStyle(color: AppTheme.primaryColor),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryColor,
+            ),
+            child: const Text('Continuar'),
+          ),
+        ],
+      ),
+    );
+    return result ?? false;
+  }
+
+  Future<void> _saveRecordatorio() async {
+    // Validar campos obligatorios PRIMERO
+    final camposFaltantes = _validarCamposObligatorios();
+    if (camposFaltantes.isNotEmpty) {
+      // Mostrar diálogo y esperar respuesta del usuario
+      final continuar = await _mostrarAlertaCamposFaltantes(camposFaltantes);
+      if (!continuar) {
+        return; // Usuario canceló
+      }
+    }
+
+    // Validar formato de campos opcionales (teléfono y email)
+    if (!_formKey.currentState!.validate()) return;
 
     setState(() {
       _isSaving = true;
@@ -191,10 +297,15 @@ class _AddRecordatorioScreenState extends State<AddRecordatorioScreen> {
       final storageService = context.read<StorageService>();
       final alarmService = context.read<AlarmService>();
 
+      // Usar valores por defecto si los campos están vacíos
+      final fechaServicio = _fechaServicio ?? DateTime.now();
+      final frecuencia = _selectedFrequency.isEmpty ? AppConstants.frecuencias[0] : _selectedFrequency;
+      final equipo = _selectedEquipment.isEmpty ? AppConstants.equipos[0] : _selectedEquipment;
+
       // Calcular fecha próxima mantenimiento
       final fechaProximo = Recordatorio.calcularFechaProximo(
-        _fechaServicio!,
-        _selectedFrequency,
+        fechaServicio,
+        frecuencia,
       );
 
       // Si el usuario seleccionó una hora específica, combinarla con la fecha
@@ -202,16 +313,16 @@ class _AddRecordatorioScreenState extends State<AddRecordatorioScreen> {
       final now = DateTime.now();
       DateTime fechaFinal = _horaAlarma != null
           ? DateTime(
-              _fechaServicio!.year,
-              _fechaServicio!.month,
-              _fechaServicio!.day,
+              fechaServicio.year,
+              fechaServicio.month,
+              fechaServicio.day,
               _horaAlarma!.hour,
               _horaAlarma!.minute,
             )
           : DateTime(
-              _fechaServicio!.year,
-              _fechaServicio!.month,
-              _fechaServicio!.day,
+              fechaServicio.year,
+              fechaServicio.month,
+              fechaServicio.day,
               now.hour,
               now.minute,
             );
@@ -242,17 +353,25 @@ class _AddRecordatorioScreenState extends State<AddRecordatorioScreen> {
         telefono: _telefonoController.text.trim(),
         email: _emailController.text.trim(),
         fechaServicio: fechaFinal,
-        frecuencia: _selectedFrequency,
-        equipo: _selectedEquipment,
+        frecuencia: frecuencia,
+        equipo: equipo,
         ubicacion: ubicacionFinal,
         observaciones: _observacionesController.text.trim(),
         fechaProximoMantenimiento: fechaProximoFinal,
-        diasFrecuencia: Recordatorio.calcularDiasFrecuencia(_selectedFrequency),
+        diasFrecuencia: Recordatorio.calcularDiasFrecuencia(frecuencia),
         alarmaProgramada: _programarAlarma,
       );
 
-      // Guardar en base de datos
+      // Guardar en base de datos LOCAL (SQLite) primero
       final id = await storageService.guardarRecordatorio(nuevoRecordatorio);
+
+      setState(() {
+        _isSaving = false;
+      });
+
+      debugPrint(
+        '✅ Recordatorio guardado en el dispositivo: ${nuevoRecordatorio.cliente}',
+      );
 
       // Programar alarma si está habilitado
       if (_programarAlarma) {
@@ -261,6 +380,8 @@ class _AddRecordatorioScreenState extends State<AddRecordatorioScreen> {
         await alarmService.programarNotificacionPrevia(recordatorioConId);
       }
 
+      // Sincronizar con BD en la nube (Firestore) en segundo plano
+      // No bloqueamos aquí, se hace de forma asíncrona
       // Mostrar éxito
       _showSuccessDialog(nuevoRecordatorio);
     } catch (e) {
@@ -285,7 +406,7 @@ class _AddRecordatorioScreenState extends State<AddRecordatorioScreen> {
         backgroundColor: AppTheme.surfaceColor,
         title: const Row(
           children: [
-            Icon(FontAwesomeIcons.checkCircle, color: AppTheme.successColor),
+            Icon(Icons.check_circle, color: AppTheme.successColor),
             SizedBox(width: 12),
             Text(
               '✅ Recordatorio Guardado',
@@ -299,8 +420,16 @@ class _AddRecordatorioScreenState extends State<AddRecordatorioScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'El recordatorio ha sido guardado exitosamente.',
+                'El recordatorio ha sido guardado exitosamente en tu dispositivo.',
                 style: TextStyle(color: AppTheme.textSecondaryColor),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Se sincronizará automáticamente con la nube.',
+                style: TextStyle(
+                  color: AppTheme.textSecondaryColor.withOpacity(0.7),
+                  fontSize: 12,
+                ),
               ),
               const SizedBox(height: 16),
               _buildSuccessDetail('👤 Cliente:', recordatorio.cliente),
@@ -490,7 +619,7 @@ class _AddRecordatorioScreenState extends State<AddRecordatorioScreen> {
             child: Row(
               children: [
                 const Icon(
-                  FontAwesomeIcons.calendarAlt,
+                  Icons.calendar_month,
                   size: 16,
                   color: AppTheme.textSecondaryColor,
                 ),
@@ -517,7 +646,7 @@ class _AddRecordatorioScreenState extends State<AddRecordatorioScreen> {
               child: Row(
                 children: [
                   Icon(
-                    FontAwesomeIcons.calendarDay,
+                    Icons.calendar_today,
                     color: AppTheme.textSecondaryColor,
                     size: 16,
                   ),
@@ -536,7 +665,7 @@ class _AddRecordatorioScreenState extends State<AddRecordatorioScreen> {
                     ),
                   ),
                   Icon(
-                    FontAwesomeIcons.chevronDown,
+                    Icons.expand_more,
                     color: AppTheme.textSecondaryColor,
                     size: 16,
                   ),
@@ -555,7 +684,7 @@ class _AddRecordatorioScreenState extends State<AddRecordatorioScreen> {
               child: Row(
                 children: [
                   Icon(
-                    FontAwesomeIcons.infoCircle,
+                    Icons.info,
                     size: 14,
                     color: AppTheme.textSecondaryColor,
                   ),
@@ -584,7 +713,7 @@ class _AddRecordatorioScreenState extends State<AddRecordatorioScreen> {
             child: Row(
               children: [
                 const Icon(
-                  FontAwesomeIcons.clock,
+                  Icons.schedule,
                   size: 16,
                   color: AppTheme.textSecondaryColor,
                 ),
@@ -617,7 +746,7 @@ class _AddRecordatorioScreenState extends State<AddRecordatorioScreen> {
               child: Row(
                 children: [
                   Icon(
-                    FontAwesomeIcons.solidClock,
+                    Icons.schedule,
                     color: AppTheme.textSecondaryColor,
                     size: 16,
                   ),
@@ -643,14 +772,14 @@ class _AddRecordatorioScreenState extends State<AddRecordatorioScreen> {
                         });
                       },
                       child: Icon(
-                        FontAwesomeIcons.times,
+                        Icons.close,
                         color: AppTheme.textSecondaryColor,
                         size: 14,
                       ),
                     )
                   else
                     Icon(
-                      FontAwesomeIcons.chevronDown,
+                      Icons.expand_more,
                       color: AppTheme.textSecondaryColor,
                       size: 16,
                     ),
@@ -674,7 +803,7 @@ class _AddRecordatorioScreenState extends State<AddRecordatorioScreen> {
             child: Row(
               children: [
                 const Icon(
-                  FontAwesomeIcons.mapMarkerAlt,
+                  Icons.location_on,
                   size: 16,
                   color: AppTheme.textSecondaryColor,
                 ),
@@ -735,7 +864,7 @@ class _AddRecordatorioScreenState extends State<AddRecordatorioScreen> {
                       vertical: 12,
                     ),
                     prefixIcon: const Icon(
-                      FontAwesomeIcons.pen,
+                      Icons.edit,
                       size: 14,
                       color: AppTheme.textSecondaryColor,
                     ),
@@ -775,7 +904,7 @@ class _AddRecordatorioScreenState extends State<AddRecordatorioScreen> {
                     child: Row(
                       children: [
                         Icon(
-                          FontAwesomeIcons.map,
+                          Icons.map,
                           color: AppTheme.textSecondaryColor,
                           size: 16,
                         ),
@@ -796,7 +925,7 @@ class _AddRecordatorioScreenState extends State<AddRecordatorioScreen> {
                           ),
                         ),
                         Icon(
-                          FontAwesomeIcons.chevronRight,
+                          Icons.navigate_next,
                           color: AppTheme.textSecondaryColor,
                           size: 16,
                         ),
@@ -819,7 +948,7 @@ class _AddRecordatorioScreenState extends State<AddRecordatorioScreen> {
               child: Row(
                 children: [
                   Icon(
-                    FontAwesomeIcons.checkCircle,
+                    Icons.check_circle,
                     size: 14,
                     color: AppTheme.accentColor,
                   ),
@@ -880,7 +1009,7 @@ class _AddRecordatorioScreenState extends State<AddRecordatorioScreen> {
               ),
             ),
             child: Icon(
-              FontAwesomeIcons.bell,
+              Icons.notifications,
               color: _programarAlarma
                   ? AppTheme.primaryColor
                   : AppTheme.textSecondaryColor,
@@ -952,7 +1081,7 @@ class _AddRecordatorioScreenState extends State<AddRecordatorioScreen> {
 
               _buildFormField(
                 label: 'Nombre del Cliente',
-                icon: FontAwesomeIcons.user,
+                icon: Icons.person,
                 controller: _clienteController,
                 validator: (value) =>
                     _validateRequired(value, 'el nombre del cliente'),
@@ -960,7 +1089,7 @@ class _AddRecordatorioScreenState extends State<AddRecordatorioScreen> {
 
               _buildFormField(
                 label: 'Teléfono',
-                icon: FontAwesomeIcons.phone,
+                icon: Icons.phone,
                 controller: _telefonoController,
                 validator: _validatePhone,
                 keyboardType: TextInputType.phone,
@@ -969,7 +1098,7 @@ class _AddRecordatorioScreenState extends State<AddRecordatorioScreen> {
 
               _buildFormField(
                 label: 'Email',
-                icon: FontAwesomeIcons.envelope,
+                icon: Icons.mail,
                 controller: _emailController,
                 validator: _validateEmail,
                 keyboardType: TextInputType.emailAddress,
@@ -1021,7 +1150,7 @@ class _AddRecordatorioScreenState extends State<AddRecordatorioScreen> {
               // Observaciones
               _buildFormField(
                 label: 'Observaciones',
-                icon: FontAwesomeIcons.stickyNote,
+                icon: Icons.note,
                 controller: _observacionesController,
                 validator: (value) => null,
                 maxLines: 3,

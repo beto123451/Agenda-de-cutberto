@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../utils/constants.dart';
 import '../utils/theme.dart';
 
@@ -40,7 +39,7 @@ class _FrequencyPickerState extends State<FrequencyPicker> {
           child: Row(
             children: [
               const Icon(
-                FontAwesomeIcons.calendarAlt,
+                Icons.calendar_month,
                 size: 16,
                 color: AppTheme.textSecondaryColor,
               ),
@@ -91,7 +90,7 @@ class _FrequencyPickerState extends State<FrequencyPicker> {
               icon: const Padding(
                 padding: EdgeInsets.only(right: 16),
                 child: Icon(
-                  FontAwesomeIcons.chevronDown,
+                  Icons.expand_more,
                   size: 16,
                   color: AppTheme.textSecondaryColor,
                 ),
@@ -136,17 +135,17 @@ class _FrequencyPickerState extends State<FrequencyPicker> {
     final isYearly = _selectedFrequency.contains('año');
 
     String indicatorText = '';
-    IconData indicatorIcon = FontAwesomeIcons.calendar;
+    IconData indicatorIcon = Icons.calendar_month;
 
     if (isDaily) {
       indicatorText = 'Mantenimiento frecuente';
-      indicatorIcon = FontAwesomeIcons.calendarDay;
+      indicatorIcon = Icons.calendar_today;
     } else if (isMonthly) {
       indicatorText = 'Mantenimiento mensual';
-      indicatorIcon = FontAwesomeIcons.calendarWeek;
+      indicatorIcon = Icons.calendar_month;
     } else if (isYearly) {
       indicatorText = 'Mantenimiento anual';
-      indicatorIcon = FontAwesomeIcons.calendarCheck;
+      indicatorIcon = Icons.event_available;
     }
 
     return Container(
@@ -245,7 +244,7 @@ class _FrequencyPickerWithPreviewState
       child: Row(
         children: [
           Icon(
-            FontAwesomeIcons.calendarCheck,
+            Icons.event_available,
             color: AppTheme.accentColor,
             size: 20,
           ),

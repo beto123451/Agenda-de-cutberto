@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
@@ -337,17 +336,17 @@ class _MapasScreenState extends State<MapasScreen> {
             ),
             const SizedBox(height: 14),
             _buildDetalleRow(
-              FontAwesomeIcons.mapMarkerAlt,
+              Icons.location_on,
               'Ubicación',
               recordatorio.ubicacion,
             ),
             _buildDetalleRow(
-              FontAwesomeIcons.tools,
+              Icons.build,
               'Equipo',
               recordatorio.equipo,
             ),
             _buildDetalleRow(
-              FontAwesomeIcons.calendarAlt,
+              Icons.calendar_month,
               'Próximo servicio',
               DateFormat(
                 "dd 'de' MMMM 'de' yyyy",
@@ -356,18 +355,18 @@ class _MapasScreenState extends State<MapasScreen> {
             ),
             if (recordatorio.telefono.isNotEmpty)
               _buildDetalleRow(
-                FontAwesomeIcons.phone,
+                Icons.phone,
                 'Teléfono',
                 recordatorio.telefono,
               ),
             if (recordatorio.email.isNotEmpty)
               _buildDetalleRow(
-                FontAwesomeIcons.envelope,
+                Icons.mail,
                 'Email',
                 recordatorio.email,
               ),
             _buildDetalleRow(
-              FontAwesomeIcons.globe,
+              Icons.public,
               'Coordenadas',
               '${ubicacion.latitud.toStringAsFixed(4)}, ${ubicacion.longitud.toStringAsFixed(4)}',
             ),
@@ -484,7 +483,7 @@ class _MapasScreenState extends State<MapasScreen> {
                         Row(
                           children: [
                             const Icon(
-                              FontAwesomeIcons.listUl,
+                              Icons.list,
                               size: 16,
                               color: AppTheme.primaryColor,
                             ),
@@ -613,7 +612,7 @@ class _MapasScreenState extends State<MapasScreen> {
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Icon(
-                                  FontAwesomeIcons.searchLocation,
+                                  Icons.search,
                                   size: 40,
                                   color: AppTheme.textSecondaryColor
                                       .withOpacity(0.5),
@@ -726,8 +725,8 @@ class _MapasScreenState extends State<MapasScreen> {
                   ),
                   child: Icon(
                     tieneUbicacion
-                        ? FontAwesomeIcons.mapMarkerAlt
-                        : FontAwesomeIcons.mapMarkedAlt,
+                        ? Icons.location_on
+                        : Icons.map_outlined,
                     size: 16,
                     color: tieneUbicacion
                         ? estadoColor
@@ -805,7 +804,7 @@ class _MapasScreenState extends State<MapasScreen> {
                     if (tieneUbicacion) ...[
                       const SizedBox(height: 4),
                       Icon(
-                        FontAwesomeIcons.arrowRight,
+                        Icons.arrow_forward,
                         size: 12,
                         color: AppTheme.textSecondaryColor.withOpacity(0.5),
                       ),
@@ -972,7 +971,7 @@ class _MapasScreenState extends State<MapasScreen> {
           if (!widget.modoSeleccion)
             IconButton(
               icon: Icon(
-                _mostrarLista ? Icons.map : FontAwesomeIcons.listUl,
+                _mostrarLista ? Icons.map : Icons.list,
                 size: _mostrarLista ? 24 : 18,
               ),
               tooltip: _mostrarLista
@@ -1037,6 +1036,7 @@ class _MapasScreenState extends State<MapasScreen> {
                             TileLayer(
                               urlTemplate:
                                   'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                              subdomains: const ['a', 'b', 'c'],
                               userAgentPackageName:
                                   'com.example.agenda_flutter',
                             ),
@@ -1222,7 +1222,7 @@ class _MapasScreenState extends State<MapasScreen> {
                     tooltip: 'Ver lista de recordatorios',
                     backgroundColor: AppTheme.surfaceColor,
                     foregroundColor: AppTheme.primaryColor,
-                    child: const Icon(FontAwesomeIcons.listUl, size: 16),
+                    child: const Icon(Icons.list, size: 16),
                   ),
                 if (!_mostrarLista) const SizedBox(height: 8),
                 FloatingActionButton(

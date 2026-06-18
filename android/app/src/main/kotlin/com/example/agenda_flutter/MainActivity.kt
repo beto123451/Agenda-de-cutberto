@@ -58,6 +58,7 @@ class MainActivity: FlutterActivity() {
             putExtra(AlarmClock.EXTRA_MESSAGE, label)
             putExtra(AlarmClock.EXTRA_SKIP_UI, true)  // No abrir la UI del Reloj
             putExtra(AlarmClock.EXTRA_VIBRATE, true)
+            putExtra(AlarmClock.EXTRA_DAYS, ArrayList<Int>()) // Lista vacía = no repetir, solo una vez
             flags = Intent.FLAG_ACTIVITY_NEW_TASK
         }
         
@@ -91,6 +92,7 @@ class MainActivity: FlutterActivity() {
         val intent = Intent(AlarmClock.ACTION_DISMISS_ALARM).apply {
             putExtra(AlarmClock.EXTRA_ALARM_SEARCH_MODE, AlarmClock.ALARM_SEARCH_MODE_LABEL)
             putExtra(AlarmClock.EXTRA_MESSAGE, label)
+            putExtra(AlarmClock.EXTRA_SKIP_UI, true)
             flags = Intent.FLAG_ACTIVITY_NEW_TASK
         }
         

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:provider/provider.dart';
 
 import '../models/recordatorio.dart';
@@ -12,7 +11,12 @@ import '../widgets/recordatorio_card.dart';
 import 'edit_recordatorio_screen.dart';
 
 class RecordatoriosListScreen extends StatefulWidget {
-  const RecordatoriosListScreen({super.key});
+  final String initialFilter;
+
+  const RecordatoriosListScreen({
+    super.key,
+    this.initialFilter = 'todos',
+  });
 
   @override
   State<RecordatoriosListScreen> createState() =>
@@ -40,6 +44,9 @@ class _RecordatoriosListScreenState extends State<RecordatoriosListScreen>
   @override
   void initState() {
     super.initState();
+
+    // Inicializar con el filtro pasado
+    _selectedFilter = widget.initialFilter;
 
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 500),
@@ -696,7 +703,7 @@ class _RecordatoriosListScreenState extends State<RecordatoriosListScreen>
               value: 'fecha',
               child: Row(
                 children: [
-                  Icon(FontAwesomeIcons.calendarAlt, size: 14),
+                  Icon(Icons.calendar_month, size: 14),
                   SizedBox(width: 8),
                   Text('Por fecha'),
                 ],
@@ -706,7 +713,7 @@ class _RecordatoriosListScreenState extends State<RecordatoriosListScreen>
               value: 'cliente',
               child: Row(
                 children: [
-                  Icon(FontAwesomeIcons.user, size: 14),
+                  Icon(Icons.person, size: 14),
                   SizedBox(width: 8),
                   Text('Por cliente'),
                 ],
@@ -716,7 +723,7 @@ class _RecordatoriosListScreenState extends State<RecordatoriosListScreen>
               value: 'equipo',
               child: Row(
                 children: [
-                  Icon(FontAwesomeIcons.tools, size: 14),
+                  Icon(Icons.build, size: 14),
                   SizedBox(width: 8),
                   Text('Por equipo'),
                 ],
@@ -724,7 +731,7 @@ class _RecordatoriosListScreenState extends State<RecordatoriosListScreen>
             ),
           ],
           dropdownColor: AppTheme.surfaceColor,
-          icon: const Icon(FontAwesomeIcons.chevronDown, size: 14),
+          icon: const Icon(Icons.expand_more, size: 14),
           style: const TextStyle(color: AppTheme.textColor, fontSize: 12),
         ),
       ),
@@ -753,20 +760,20 @@ class _RecordatoriosListScreenState extends State<RecordatoriosListScreen>
           IconButton(
             icon: Icon(
               _selectedRecordatorios.length == _filteredRecordatorios.length
-                  ? FontAwesomeIcons.square
-                  : FontAwesomeIcons.checkSquare,
+                  ? Icons.square_outlined
+                  : Icons.check_box,
               size: 18,
             ),
             onPressed: _selectAll,
             color: AppTheme.primaryColor,
           ),
           IconButton(
-            icon: const Icon(FontAwesomeIcons.bell, size: 18),
+            icon: const Icon(Icons.notifications, size: 18),
             onPressed: _toggleAlarmasSelected,
             color: AppTheme.primaryColor,
           ),
           IconButton(
-            icon: const Icon(FontAwesomeIcons.trashAlt, size: 18),
+            icon: const Icon(Icons.delete, size: 18),
             onPressed: _deleteSelected,
             color: AppTheme.errorColor,
           ),
@@ -787,7 +794,7 @@ class _RecordatoriosListScreenState extends State<RecordatoriosListScreen>
       child: Row(
         children: [
           const Icon(
-            FontAwesomeIcons.search,
+            Icons.search,
             size: 16,
             color: AppTheme.textSecondaryColor,
           ),
@@ -812,7 +819,7 @@ class _RecordatoriosListScreenState extends State<RecordatoriosListScreen>
           ),
           if (_searchQuery.isNotEmpty)
             IconButton(
-              icon: const Icon(FontAwesomeIcons.times, size: 14),
+              icon: const Icon(Icons.close, size: 14),
               onPressed: () {
                 _searchController.clear();
                 setState(() {
@@ -837,7 +844,7 @@ class _RecordatoriosListScreenState extends State<RecordatoriosListScreen>
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              FontAwesomeIcons.calendarPlus,
+              Icons.add_box,
               size: 64,
               color: AppTheme.textSecondaryColor.withOpacity(0.5),
             ),
@@ -889,13 +896,13 @@ class _RecordatoriosListScreenState extends State<RecordatoriosListScreen>
         actions: [
           if (_selectionMode)
             IconButton(
-              icon: const Icon(FontAwesomeIcons.times),
+              icon: const Icon(Icons.close),
               onPressed: _toggleSelectionMode,
               color: AppTheme.primaryColor,
             )
           else
             IconButton(
-              icon: const Icon(FontAwesomeIcons.checkSquare),
+              icon: const Icon(Icons.check_box),
               onPressed: _toggleSelectionMode,
               color: AppTheme.primaryColor,
             ),
@@ -1186,7 +1193,7 @@ class _SelectableRecordatorioCardState
               ),
               child: _isSelected
                   ? const Icon(
-                      FontAwesomeIcons.check,
+                      Icons.check,
                       size: 14,
                       color: AppTheme.secondaryColor,
                     )

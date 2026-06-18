@@ -40,7 +40,7 @@ class Recordatorio {
   }) : fechaCreacion = fechaCreacion ?? DateTime.now(),
        fechaModificacion = fechaModificacion ?? DateTime.now();
 
-  // Constructor desde JSON
+  // Constructor desde JSON (compatible con SQLite int y Firestore bool)
   factory Recordatorio.fromJson(Map<String, dynamic> json) {
     return Recordatorio(
       id: json['id'],
@@ -57,13 +57,11 @@ class Recordatorio {
       ),
       diasFrecuencia:
           json['dias_frecuencia'] ?? calcularDiasFrecuencia(json['frecuencia']),
-      alarmaProgramada: (json['alarma_programada'] as int?) == 1 ? true : false,
+      alarmaProgramada: _parseBool(json['alarma_programada']),
       fechaAlarma: json['fecha_alarma'] != null
           ? DateTime.parse(json['fecha_alarma'])
           : null,
-      notificacionProgramada: (json['notificacion_programada'] as int?) == 1
-          ? true
-          : false,
+      notificacionProgramada: _parseBool(json['notificacion_programada']),
       fechaNotificacion: json['fecha_notificacion'] != null
           ? DateTime.parse(json['fecha_notificacion'])
           : null,
@@ -74,6 +72,12 @@ class Recordatorio {
           ? DateTime.parse(json['fecha_modificacion'])
           : DateTime.now(),
     );
+  }
+
+  static bool _parseBool(dynamic value) {
+    if (value is bool) return value;
+    if (value is int) return value == 1;
+    return false;
   }
 
   // Convertir a JSON
@@ -91,9 +95,9 @@ class Recordatorio {
       'fecha_proximo_mantenimiento': fechaProximoMantenimiento
           .toIso8601String(),
       'dias_frecuencia': diasFrecuencia,
-      'alarma_programada': alarmaProgramada,
+      'alarma_programada': alarmaProgramada ? 1 : 0,
       'fecha_alarma': fechaAlarma?.toIso8601String(),
-      'notificacion_programada': notificacionProgramada,
+      'notificacion_programada': notificacionProgramada ? 1 : 0,
       'fecha_notificacion': fechaNotificacion?.toIso8601String(),
       'fecha_creacion': fechaCreacion.toIso8601String(),
       'fecha_modificacion': fechaModificacion.toIso8601String(),

@@ -3,7 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:timezone/timezone.dart' as tz;
+import '../models/notification_settings.dart';
 import 'alarm_service.dart';
+import 'storage_service.dart';
 
 // Callbacks para interacciones con notificaciones
 typedef AlarmTapCallback =
@@ -98,6 +101,31 @@ class NotificationService {
   void setNotificationActionCallback(NotificationActionCallback callback) {
     _notificationActionCallback = callback;
     debugPrint('✅ Callback de acciones de notificación registrado');
+  }
+
+  // Referencia a AlarmService para manejar acciones
+  AlarmService? _alarmService;
+  void setAlarmService(AlarmService alarmService) {
+    _alarmService = alarmService;
+    debugPrint('✅ AlarmService inyectado en NotificationService');
+  }
+
+  // Obtener configuración de notificación guardada
+  Future<NotificationSettings> _getNotificationSettings() async {
+    try {
+      final storageService = StorageService();
+      return await storageService.getNotificationSettings();
+    } catch (e) {
+      debugPrint('⚠️ Error obteniendo configuración de notificaciones: $e');
+      return NotificationSettings(); // Retornar valores por defecto
+    }
+  }
+
+  // Obtener el sonido de notificación configurado
+  AndroidNotificationSound? _getConfiguredSound(String selectedTone) {
+    // Usar el alarma_10.mp3 que existe en raw/
+    // Todos los tonos usan el mismo archivo que ya está disponible
+    return const RawResourceAndroidNotificationSound('alarma_10');
   }
 
   // Limpiar callbacks
@@ -228,11 +256,15 @@ class NotificationService {
   }) async {
     if (!_initialized) await initialize();
 
+    // Obtener configuración de notificaciones
+    final settings = await _getNotificationSettings();
+    final sound = _getConfiguredSound(settings.selectedRingtone);
+
     // Configurar detalles según el canal
     AndroidNotificationDetails androidDetails;
     switch (channelId) {
       case _channelIdAlarmas:
-        androidDetails = const AndroidNotificationDetails(
+        androidDetails = AndroidNotificationDetails(
           _channelIdAlarmas,
           'Alarmas de Mantenimiento',
           channelDescription: 'Alarmas urgentes para mantenimientos pendientes',
@@ -241,9 +273,10 @@ class NotificationService {
           fullScreenIntent: true,
           autoCancel: false,
           ongoing: true,
-          playSound: true,
-          enableVibration: true,
-          category: AndroidNotificationCategory.alarm,
+          playSound: settings.enableSound,
+          sound: sound,
+          enableVibration: settings.enableVibration,
+          category: AndroidNotificationCategory.call,
           visibility: NotificationVisibility.public,
           timeoutAfter: 60000, // 1 minuto
           actions: [
@@ -257,25 +290,28 @@ class NotificationService {
         );
         break;
       case _channelIdRecordatorios:
-        androidDetails = const AndroidNotificationDetails(
+        androidDetails = AndroidNotificationDetails(
           _channelIdRecordatorios,
           'Recordatorios de Mantenimiento',
           channelDescription:
               'Notificaciones para recordatorios de mantenimiento',
           importance: Importance.high,
           priority: Priority.high,
-          playSound: true,
-          enableVibration: true,
+          playSound: settings.enableSound,
+          sound: sound,
+          enableVibration: settings.enableVibration,
           category: AndroidNotificationCategory.reminder,
         );
         break;
       default:
-        androidDetails = const AndroidNotificationDetails(
+        androidDetails = AndroidNotificationDetails(
           _channelIdGeneral,
           'Notificaciones Generales',
           channelDescription: 'Notificaciones generales de la aplicación',
           importance: Importance.defaultImportance,
           priority: Priority.defaultPriority,
+          playSound: settings.enableSound,
+          enableVibration: settings.enableVibration,
         );
     }
 
@@ -283,12 +319,18 @@ class NotificationService {
       android: androidDetails,
     );
 
-    // Usar solo .show() en lugar de zonedSchedule para evitar problemas de permisos
-    await _notificationsPlugin.show(
+    // Programar notificación para la fecha indicada
+    final tzScheduleTime = tz.TZDateTime.from(scheduleTime, tz.local);
+
+    await _notificationsPlugin.zonedSchedule(
       id,
       title,
       body,
+      tzScheduleTime,
       platformChannelSpecifics,
+      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
       payload: payload,
     );
 
@@ -313,7 +355,11 @@ class NotificationService {
     debugPrint('   Es Prueba: $esPrueba');
     debugPrint('========================================');
 
-    const AndroidNotificationDetails androidDetails =
+    // Obtener configuración de notificaciones
+    final settings = await _getNotificationSettings();
+    final sound = _getConfiguredSound(settings.selectedRingtone);
+
+    final AndroidNotificationDetails androidDetails =
         AndroidNotificationDetails(
           _channelIdAlarmas,
           'Alarmas de Mantenimiento',
@@ -323,11 +369,10 @@ class NotificationService {
           fullScreenIntent: true,
           autoCancel: false,
           ongoing: true,
-          playSound: true,
-          // Usar alarma_10.mp3 como sonido de notificación
-          sound: RawResourceAndroidNotificationSound('alarma_10'),
-          enableVibration: true,
-          category: AndroidNotificationCategory.alarm,
+          playSound: settings.enableSound,
+          sound: sound,
+          enableVibration: settings.enableVibration,
+          category: AndroidNotificationCategory.call,
           visibility: NotificationVisibility.public,
           timeoutAfter: 300000, // 5 minutos
           colorized: true,
@@ -352,15 +397,26 @@ class NotificationService {
     final notificationId = 999; // ID fijo para la alarma
 
     try {
-      await _notificationsPlugin.show(
-        notificationId,
-        titulo,
-        texto,
-        platformChannelSpecifics,
-        payload: 'alarma|$cliente|$equipo|$fecha|${esPrueba.toString()}',
-      );
+      // Reproducir la alarma múltiples veces para simular un sonido continuo
+      int repeticiones = 5;
+      for (int i = 0; i < repeticiones; i++) {
+        debugPrint('🔔 SONANDO ALARMA ${i + 1}/$repeticiones');
+        
+        await _notificationsPlugin.show(
+          notificationId,
+          titulo,
+          texto,
+          platformChannelSpecifics,
+          payload: 'alarma|$cliente|$equipo|$fecha|${esPrueba.toString()}',
+        );
+        
+        // Esperar 6.5 segundos antes de la siguiente repetición
+        if (i < repeticiones - 1) {
+          await Future.delayed(const Duration(milliseconds: 6500));
+        }
+      }
 
-      debugPrint('✅ Alarma mostrada en centro de notificaciones');
+      debugPrint('✅ Alarma mostrada en centro de notificaciones (x$repeticiones)');
       debugPrint('   ID: $notificationId');
       debugPrint('========================================');
       debugPrint('');
@@ -542,13 +598,17 @@ class NotificationService {
   void _handleDismissAction() {
     debugPrint('➡️ _handleDismissAction() ejecutando...');
     try {
-      cancelAllNotifications();
-      debugPrint('✅ Notificación cancelada');
+      debugPrint('✅ Acción "Cerrar Alarma" procesada');
 
-      // Obtener AlarmService y detener la alarma
-      final alarmService = AlarmService();
-      alarmService.detenerAlarma();
-      debugPrint('✅ AlarmService.detenerAlarma() llamado');
+      // Usar AlarmService inyectado
+      if (_alarmService != null) {
+        _alarmService!.detenerAlarma();
+        debugPrint('✅ AlarmService.detenerAlarma() llamado');
+      } else {
+        debugPrint('⚠️ AlarmService no inyectado, creando instancia temporal');
+        final alarmService = AlarmService();
+        alarmService.detenerAlarma();
+      }
     } catch (e) {
       debugPrint('❌ Error en _handleDismissAction: $e');
     }
@@ -557,14 +617,22 @@ class NotificationService {
   // Manejar acción snooze directamente
   void _handleSnoozeAction(String cliente, String equipo, String fecha) {
     debugPrint('➡️ _handleSnoozeAction() ejecutando...');
-    try {
-      cancelAllNotifications();
-      debugPrint('✅ Notificación cancelada');
+    debugPrint('   Cliente: $cliente');
+    debugPrint('   Equipo: $equipo');
+    debugPrint('   Fecha: $fecha');
 
-      // Obtener AlarmService y posponer la alarma
-      final alarmService = AlarmService();
-      alarmService.posponderAlarma(cliente, equipo, fecha, null);
-      debugPrint('✅ AlarmService.posponderAlarma() llamado');
+    try {
+      debugPrint('✅ Acción "Posponer 5 min" procesada');
+
+      // Usar AlarmService inyectado
+      if (_alarmService != null) {
+        _alarmService!.posponderAlarma(cliente, equipo, fecha, null);
+        debugPrint('✅ AlarmService.posponderAlarma() llamado');
+      } else {
+        debugPrint('⚠️ AlarmService no inyectado, creando instancia temporal');
+        final alarmService = AlarmService();
+        alarmService.posponderAlarma(cliente, equipo, fecha, null);
+      }
     } catch (e) {
       debugPrint('❌ Error en _handleSnoozeAction: $e');
     }

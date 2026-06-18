@@ -8,6 +8,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/recordatorio.dart';
 import '../models/alarma_config.dart';
 import '../models/usuario.dart';
+import '../models/notification_settings.dart';
+import 'firestore_service.dart';
 
 class StorageService {
   static const String _dbName = 'agenda_teran.db';
@@ -16,9 +18,11 @@ class StorageService {
   static const String _prefsRecordatorios = 'recordatorios_guardados';
   static const String _prefsConfigAlarma = 'config_alarma';
   static const String _prefsUsuario = 'usuario_actual';
+  static const String _prefsNotificationSettings = 'notification_settings';
 
   Database? _database;
   SharedPreferences? _prefs;
+  final FirestoreService _firestoreService = FirestoreService();
 
   // Singleton
   static final StorageService _instance = StorageService._internal();
@@ -150,19 +154,20 @@ class StorageService {
       final db = _database;
       if (db == null) throw Exception('Base de datos no inicializada');
 
+      int id;
       // Si tiene ID, actualizar; si no, insertar
       if (recordatorio.id != null) {
-        final id = await db.update(
+        id = await db.update(
           'recordatorios',
           recordatorio.toJson(),
           where: 'id = ?',
           whereArgs: [recordatorio.id],
         );
+        id = recordatorio.id!;
 
         debugPrint('✅ Recordatorio actualizado: ${recordatorio.cliente}');
-        return id;
       } else {
-        final id = await db.insert('recordatorios', recordatorio.toJson());
+        id = await db.insert('recordatorios', recordatorio.toJson());
 
         // Guardar también en SharedPreferences para compatibilidad
         await _guardarRecordatorioEnPrefs(recordatorio.copyWith(id: id));
@@ -170,12 +175,25 @@ class StorageService {
         debugPrint(
           '✅ Recordatorio guardado: ${recordatorio.cliente} (ID: $id)',
         );
-        return id;
       }
+
+      // Sincronizar con Firestore en segundo plano
+      _syncToFirestore(recordatorio.copyWith(id: id));
+
+      return id;
     } catch (e) {
       debugPrint('❌ Error guardando recordatorio: $e');
       rethrow;
     }
+  }
+
+  /// Sincronizar recordatorio con Firestore (sin bloquear)
+  void _syncToFirestore(Recordatorio recordatorio) {
+    if (!_firestoreService.isInitialized) return;
+    _firestoreService.guardarRecordatorio(recordatorio).catchError((e) {
+      debugPrint('⚠️ Error sincronizando con Firestore: $e');
+      return '';
+    });
   }
 
   // Obtener todos los recordatorios
@@ -244,6 +262,13 @@ class StorageService {
       // También eliminar de SharedPreferences
       await _eliminarRecordatorioDePrefs(id);
 
+      // Eliminar de Firestore en segundo plano
+      if (_firestoreService.isInitialized) {
+        _firestoreService.eliminarRecordatorio(id).catchError((e) {
+          debugPrint('⚠️ Error eliminando de Firestore: $e');
+        });
+      }
+
       debugPrint('🗑️ Recordatorio eliminado: ID $id');
       return result;
     } catch (e) {
@@ -264,6 +289,13 @@ class StorageService {
 
       // Guardar también en SharedPreferences
       await _guardarConfigAlarmaEnPrefs(config);
+
+      // Sincronizar con Firestore
+      if (_firestoreService.isInitialized) {
+        _firestoreService.guardarConfigAlarma(config).catchError((e) {
+          debugPrint('⚠️ Error sincronizando config con Firestore: $e');
+        });
+      }
 
       debugPrint('✅ Configuración de alarma guardada');
     } catch (e) {
@@ -488,6 +520,130 @@ class StorageService {
       debugPrint('🧹 Todos los datos limpiados');
     } catch (e) {
       debugPrint('❌ Error limpiando datos: $e');
+    }
+  }
+
+  // Obtener información de almacenamiento del dispositivo
+  Future<Map<String, dynamic>> getAlmacenamientoInfo() async {
+    try {
+      final documentsDirectory = await getApplicationDocumentsDirectory();
+      final dbPath = path.join(documentsDirectory.path, _dbName);
+      final dbFile = File(dbPath);
+
+      // Tamaño de la base de datos en bytes
+      int dbSize = 0;
+      if (await dbFile.exists()) {
+        dbSize = await dbFile.length();
+      }
+
+      // Información del espacio libre y total del dispositivo
+      Map<String, dynamic> spaceStat;
+      try {
+        // Intentar obtener info del disco
+        spaceStat = await _getFreeDiskSpace();
+      } catch (e) {
+        debugPrint('⚠️ No se pudo obtener espacio del disco: $e');
+        spaceStat = {
+          'freeDiskSpace': null,
+          'totalDiskSpace': null,
+        };
+      }
+
+      return {
+        'dbSize': dbSize,
+        'dbSizeFormatted': _formatBytes(dbSize),
+        'freeDiskSpace': spaceStat['freeDiskSpace'],
+        'freeDiskSpaceFormatted':
+            _formatBytes(spaceStat['freeDiskSpace'] ?? 0),
+        'totalDiskSpace': spaceStat['totalDiskSpace'],
+        'totalDiskSpaceFormatted':
+            _formatBytes(spaceStat['totalDiskSpace'] ?? 0),
+        'usedDiskSpace': spaceStat['usedDiskSpace'],
+        'usedDiskSpaceFormatted':
+            _formatBytes(spaceStat['usedDiskSpace'] ?? 0),
+        'usagePercentage': spaceStat['usagePercentage'] ?? 0.0,
+      };
+    } catch (e) {
+      debugPrint('❌ Error obteniendo info de almacenamiento: $e');
+      return {
+        'dbSize': 0,
+        'dbSizeFormatted': '0 B',
+        'freeDiskSpace': null,
+        'freeDiskSpaceFormatted': 'N/A',
+        'totalDiskSpace': null,
+        'totalDiskSpaceFormatted': 'N/A',
+        'usedDiskSpace': null,
+        'usedDiskSpaceFormatted': 'N/A',
+        'usagePercentage': 0.0,
+      };
+    }
+  }
+
+  // Obtener espacio libre del disco (multiplataforma)
+  Future<Map<String, dynamic>> _getFreeDiskSpace() async {
+    try {
+      // Nota: disk_space fue removido por compatibilidad con Gradle
+      // Retornar valores por defecto
+      return {
+        'freeDiskSpace': null,
+        'totalDiskSpace': null,
+        'usedDiskSpace': null,
+        'usagePercentage': 0.0,
+      };
+    } catch (e) {
+      debugPrint('Error obteniendo espacio del disco: $e');
+      return {
+        'freeDiskSpace': null,
+        'totalDiskSpace': null,
+        'usedDiskSpace': null,
+        'usagePercentage': 0.0,
+      };
+    }
+  }
+
+  // Helper para obtener info del disco (requiere disk_space)
+  // Formattear bytes a formato legible
+  String _formatBytes(int? bytes) {
+    if (bytes == null || bytes == 0) return '0 B';
+
+    const List<String> suffixes = ['B', 'KB', 'MB', 'GB', 'TB'];
+    int suffixIndex = 0;
+    double displaySize = bytes.toDouble();
+
+    while (displaySize >= 1024 && suffixIndex < suffixes.length - 1) {
+      displaySize /= 1024;
+      suffixIndex++;
+    }
+
+    return '${displaySize.toStringAsFixed(2)} ${suffixes[suffixIndex]}';
+  }
+
+  // =================== Configuración de Notificaciones ===================
+
+  /// Guardar preferencias de notificación
+  Future<void> saveNotificationSettings(NotificationSettings settings) async {
+    try {
+      await _prefs?.setString(
+        _prefsNotificationSettings,
+        jsonEncode(settings.toJson()),
+      );
+      debugPrint('✅ Configuración de notificaciones guardada');
+    } catch (e) {
+      debugPrint('❌ Error guardando configuración de notificaciones: $e');
+    }
+  }
+
+  /// Obtener preferencias de notificación
+  Future<NotificationSettings> getNotificationSettings() async {
+    try {
+      final String? settingsJson = _prefs?.getString(_prefsNotificationSettings);
+      if (settingsJson != null) {
+        return NotificationSettings.fromJson(jsonDecode(settingsJson));
+      }
+      return NotificationSettings(); // Retornar valores por defecto
+    } catch (e) {
+      debugPrint('❌ Error obteniendo configuración de notificaciones: $e');
+      return NotificationSettings();
     }
   }
 

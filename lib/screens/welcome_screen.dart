@@ -1,6 +1,5 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:provider/provider.dart';
 
 import '../services/storage_service.dart';
@@ -28,28 +27,28 @@ class _WelcomeScreenState extends State<WelcomeScreen>
   // Características de la app
   final List<Map<String, dynamic>> _features = [
     {
-      'icon': FontAwesomeIcons.bell,
+      'icon': Icons.notifications,
       'title': 'Alarmas Inteligentes',
       'description': 'Notificaciones en pantalla completa que te despiertan',
       'color': AppTheme.primaryColor,
       'gradient': [AppTheme.primaryColor, AppTheme.accentColor],
     },
     {
-      'icon': FontAwesomeIcons.calendarCheck,
+      'icon': Icons.event_available,
       'title': 'Agenda Programada',
       'description': 'Control total de mantenimientos y recordatorios',
       'color': const Color(0xFF4CAF50),
       'gradient': [const Color(0xFF4CAF50), const Color(0xFF8BC34A)],
     },
     {
-      'icon': FontAwesomeIcons.mapMarkerAlt,
+      'icon': Icons.location_on,
       'title': 'Mapas Integrados',
       'description': 'Ubicaciones exactas con direcciones y coordenadas',
       'color': const Color(0xFF2196F3),
       'gradient': [const Color(0xFF2196F3), const Color(0xFF03A9F4)],
     },
     {
-      'icon': FontAwesomeIcons.chartLine,
+      'icon': Icons.trending_up,
       'title': 'Estadísticas Avanzadas',
       'description': 'Seguimiento de mantenimientos y rendimiento',
       'color': const Color(0xFF9C27B0),
@@ -225,7 +224,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                                 ),
                                 const SizedBox(width: 12),
                                 const Icon(
-                                  FontAwesomeIcons.arrowRight,
+                                  Icons.arrow_forward,
                                   size: 18,
                                 ),
                               ],
@@ -289,7 +288,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                   ],
                 ),
                 child: const Icon(
-                  FontAwesomeIcons.calendarCheck,
+                  Icons.event_available,
                   size: 70,
                   color: Colors.white,
                 ),
@@ -354,7 +353,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
               child: Column(
                 children: [
                   const Icon(
-                    FontAwesomeIcons.handsHelping,
+                    Icons.handshake,
                     color: AppTheme.primaryColor,
                     size: 32,
                   ),
@@ -479,12 +478,12 @@ class _WelcomeScreenState extends State<WelcomeScreen>
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(FontAwesomeIcons.bell, color: AppTheme.accentColor),
+                  Icon(Icons.notifications, color: AppTheme.accentColor),
                   const SizedBox(width: 8),
-                  Icon(FontAwesomeIcons.mobile, color: AppTheme.accentColor),
+                  Icon(Icons.phone_android, color: AppTheme.accentColor),
                   const SizedBox(width: 8),
                   Icon(
-                    FontAwesomeIcons.mobileScreen,
+                    Icons.phone_android,
                     color: AppTheme.accentColor,
                   ),
                 ],
@@ -550,14 +549,14 @@ class _WelcomeScreenState extends State<WelcomeScreen>
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(FontAwesomeIcons.map, color: AppTheme.accentColor),
+                  Icon(Icons.map, color: AppTheme.accentColor),
                   const SizedBox(width: 16),
                   Icon(
-                    FontAwesomeIcons.locationArrow,
+                    Icons.location_on,
                     color: AppTheme.accentColor,
                   ),
                   const SizedBox(width: 16),
-                  Icon(FontAwesomeIcons.route, color: AppTheme.accentColor),
+                  Icon(Icons.directions, color: AppTheme.accentColor),
                 ],
               ),
               const SizedBox(height: 16),
@@ -588,14 +587,14 @@ class _WelcomeScreenState extends State<WelcomeScreen>
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(FontAwesomeIcons.chartBar, color: AppTheme.accentColor),
+                  Icon(Icons.bar_chart, color: AppTheme.accentColor),
                   const SizedBox(width: 16),
                   Icon(
-                    FontAwesomeIcons.tachometerAlt,
+                    Icons.speed,
                     color: AppTheme.accentColor,
                   ),
                   const SizedBox(width: 16),
-                  Icon(FontAwesomeIcons.trophy, color: AppTheme.accentColor),
+                  Icon(Icons.emoji_events, color: AppTheme.accentColor),
                 ],
               ),
               const SizedBox(height: 16),

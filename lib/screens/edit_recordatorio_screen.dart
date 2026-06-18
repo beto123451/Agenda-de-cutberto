@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:provider/provider.dart';
 
 import '../models/recordatorio.dart';
@@ -229,17 +228,111 @@ class _EditRecordatorioScreenState extends State<EditRecordatorioScreen> {
     return null;
   }
 
-  Future<void> _saveChanges() async {
-    if (!_formKey.currentState!.validate()) return;
+  /// Valida todos los campos obligatorios y retorna una lista de campos faltantes
+  List<String> _validarCamposObligatorios() {
+    final camposFaltantes = <String>[];
+
+    // Validar cliente
+    if (_clienteController.text.trim().isEmpty) {
+      camposFaltantes.add('👤 Nombre del Cliente');
+    }
+
+    // Validar equipo
+    if (_selectedEquipment.isEmpty) {
+      camposFaltantes.add('🔧 Equipo');
+    }
+
+    // Validar frecuencia
+    if (_selectedFrequency.isEmpty) {
+      camposFaltantes.add('⏱️ Frecuencia');
+    }
+
+    // Validar fecha de servicio
     if (_fechaServicio == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Por favor selecciona una fecha de servicio'),
-          backgroundColor: AppTheme.errorColor,
+      camposFaltantes.add('📅 Fecha de Servicio');
+    }
+
+    // Validar ubicación (texto o mapa)
+    if (_ubicacion.isEmpty) {
+      camposFaltantes.add('📍 Ubicación');
+    }
+
+    return camposFaltantes;
+  }
+
+  /// Muestra un diálogo con los campos que faltan
+  void _mostrarAlertaCamposFaltantes(List<String> camposFaltantes) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppTheme.surfaceColor,
+        icon: const Icon(
+          Icons.warning,
+          color: AppTheme.errorColor,
+          size: 32,
         ),
-      );
+        title: const Text(
+          '⚠️ Campos Faltantes',
+          style: TextStyle(color: AppTheme.textColor),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Por favor completa los siguientes campos obligatorios:',
+              style: TextStyle(color: AppTheme.textSecondaryColor),
+            ),
+            const SizedBox(height: 16),
+            ...camposFaltantes.map((campo) {
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.radio_button_checked,
+                      size: 6,
+                      color: AppTheme.errorColor,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        campo,
+                        style: const TextStyle(
+                          color: AppTheme.textColor,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+          ],
+        ),
+        actions: [
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryColor,
+            ),
+            child: const Text('Entendido'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _saveChanges() async {
+    // Validar campos obligatorios PRIMERO
+    final camposFaltantes = _validarCamposObligatorios();
+    if (camposFaltantes.isNotEmpty) {
+      _mostrarAlertaCamposFaltantes(camposFaltantes);
       return;
     }
+
+    // Validar formato de campos opcionales (teléfono y email)
+    if (!_formKey.currentState!.validate()) return;
 
     setState(() {
       _isSaving = true;
@@ -297,8 +390,12 @@ class _EditRecordatorioScreenState extends State<EditRecordatorioScreen> {
         notificacionProgramada: false,
       );
 
-      // Guardar cambios
+      // Guardar cambios en el dispositivo LOCAL (SQLite) primero
       await storageService.actualizarRecordatorio(recordatorioActualizado);
+
+      debugPrint(
+        '✅ Recordatorio actualizado en el dispositivo: ${recordatorioActualizado.cliente}',
+      );
 
       // Reprogramar alarmas si están habilitadas
       if (_programarAlarma) {
@@ -330,7 +427,7 @@ class _EditRecordatorioScreenState extends State<EditRecordatorioScreen> {
         backgroundColor: AppTheme.surfaceColor,
         title: const Row(
           children: [
-            Icon(FontAwesomeIcons.checkCircle, color: AppTheme.successColor),
+            Icon(Icons.check_circle, color: AppTheme.successColor),
             SizedBox(width: 12),
             Text(
               '✅ Cambios Guardados',
@@ -344,8 +441,16 @@ class _EditRecordatorioScreenState extends State<EditRecordatorioScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'El recordatorio ha sido actualizado exitosamente.',
+                'El recordatorio ha sido actualizado exitosamente en tu dispositivo.',
                 style: TextStyle(color: AppTheme.textSecondaryColor),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Se sincronizará automáticamente con la nube.',
+                style: TextStyle(
+                  color: AppTheme.textSecondaryColor.withOpacity(0.7),
+                  fontSize: 12,
+                ),
               ),
               const SizedBox(height: 16),
               _buildSuccessDetail('👤 Cliente:', recordatorio.cliente),
@@ -519,7 +624,7 @@ class _EditRecordatorioScreenState extends State<EditRecordatorioScreen> {
             child: Row(
               children: [
                 const Icon(
-                  FontAwesomeIcons.calendarAlt,
+                  Icons.calendar_month,
                   size: 16,
                   color: AppTheme.textSecondaryColor,
                 ),
@@ -546,7 +651,7 @@ class _EditRecordatorioScreenState extends State<EditRecordatorioScreen> {
               child: Row(
                 children: [
                   Icon(
-                    FontAwesomeIcons.calendarDay,
+                    Icons.calendar_today,
                     color: AppTheme.textSecondaryColor,
                     size: 16,
                   ),
@@ -565,7 +670,7 @@ class _EditRecordatorioScreenState extends State<EditRecordatorioScreen> {
                     ),
                   ),
                   Icon(
-                    FontAwesomeIcons.chevronDown,
+                    Icons.expand_more,
                     color: AppTheme.textSecondaryColor,
                     size: 16,
                   ),
@@ -584,7 +689,7 @@ class _EditRecordatorioScreenState extends State<EditRecordatorioScreen> {
               child: Row(
                 children: [
                   Icon(
-                    FontAwesomeIcons.infoCircle,
+                    Icons.info,
                     size: 14,
                     color: AppTheme.textSecondaryColor,
                   ),
@@ -628,7 +733,7 @@ class _EditRecordatorioScreenState extends State<EditRecordatorioScreen> {
             child: Row(
               children: [
                 const Icon(
-                  FontAwesomeIcons.clock,
+                  Icons.schedule,
                   size: 16,
                   color: AppTheme.textSecondaryColor,
                 ),
@@ -654,7 +759,7 @@ class _EditRecordatorioScreenState extends State<EditRecordatorioScreen> {
               child: Row(
                 children: [
                   Icon(
-                    FontAwesomeIcons.clock,
+                    Icons.schedule,
                     color: AppTheme.textSecondaryColor,
                     size: 16,
                   ),
@@ -673,7 +778,7 @@ class _EditRecordatorioScreenState extends State<EditRecordatorioScreen> {
                     ),
                   ),
                   Icon(
-                    FontAwesomeIcons.chevronDown,
+                    Icons.expand_more,
                     color: AppTheme.textSecondaryColor,
                     size: 16,
                   ),
@@ -700,7 +805,7 @@ class _EditRecordatorioScreenState extends State<EditRecordatorioScreen> {
             child: Row(
               children: [
                 const Icon(
-                  FontAwesomeIcons.mapMarkerAlt,
+                  Icons.location_on,
                   size: 16,
                   color: AppTheme.textSecondaryColor,
                 ),
@@ -726,7 +831,7 @@ class _EditRecordatorioScreenState extends State<EditRecordatorioScreen> {
               child: Row(
                 children: [
                   Icon(
-                    FontAwesomeIcons.map,
+                    Icons.map,
                     color: AppTheme.textSecondaryColor,
                     size: 16,
                   ),
@@ -756,7 +861,7 @@ class _EditRecordatorioScreenState extends State<EditRecordatorioScreen> {
                     ),
                   ),
                   Icon(
-                    FontAwesomeIcons.chevronRight,
+                    Icons.navigate_next,
                     color: AppTheme.textSecondaryColor,
                     size: 16,
                   ),
@@ -777,8 +882,8 @@ class _EditRecordatorioScreenState extends State<EditRecordatorioScreen> {
                   Icon(
                     _ubicacion.isNotEmpty &&
                             _ubicacion != widget.recordatorio.ubicacion
-                        ? FontAwesomeIcons.exchangeAlt
-                        : FontAwesomeIcons.checkCircle,
+                        ? Icons.swap_horiz
+                        : Icons.check_circle,
                     size: 14,
                     color:
                         _ubicacion.isNotEmpty &&
@@ -857,7 +962,7 @@ class _EditRecordatorioScreenState extends State<EditRecordatorioScreen> {
                   ),
                 ),
                 child: Icon(
-                  FontAwesomeIcons.bell,
+                  Icons.notifications,
                   color: _programarAlarma
                       ? AppTheme.primaryColor
                       : AppTheme.textSecondaryColor,
@@ -917,8 +1022,8 @@ class _EditRecordatorioScreenState extends State<EditRecordatorioScreen> {
                 children: [
                   Icon(
                     _programarAlarma
-                        ? FontAwesomeIcons.bell
-                        : FontAwesomeIcons.bellSlash,
+                        ? Icons.notifications
+                        : Icons.notifications_off,
                     size: 14,
                     color: _programarAlarma
                         ? AppTheme.successColor
@@ -987,7 +1092,7 @@ class _EditRecordatorioScreenState extends State<EditRecordatorioScreen> {
           Row(
             children: [
               Icon(
-                FontAwesomeIcons.exclamationTriangle,
+                Icons.warning,
                 size: 16,
                 color: AppTheme.warningColor,
               ),
@@ -1053,7 +1158,7 @@ class _EditRecordatorioScreenState extends State<EditRecordatorioScreen> {
           actions: [
             if (_hasChanges)
               IconButton(
-                icon: const Icon(FontAwesomeIcons.save),
+                icon: const Icon(Icons.save),
                 onPressed: _isSaving ? null : _saveChanges,
                 color: AppTheme.primaryColor,
                 tooltip: 'Guardar cambios',
@@ -1155,7 +1260,7 @@ class _EditRecordatorioScreenState extends State<EditRecordatorioScreen> {
 
                 _buildFormField(
                   label: 'Nombre del Cliente',
-                  icon: FontAwesomeIcons.user,
+                  icon: Icons.person,
                   controller: _clienteController,
                   validator: (value) =>
                       _validateRequired(value, 'el nombre del cliente'),
@@ -1163,7 +1268,7 @@ class _EditRecordatorioScreenState extends State<EditRecordatorioScreen> {
 
                 _buildFormField(
                   label: 'Teléfono',
-                  icon: FontAwesomeIcons.phone,
+                  icon: Icons.phone,
                   controller: _telefonoController,
                   validator: _validatePhone,
                   keyboardType: TextInputType.phone,
@@ -1172,7 +1277,7 @@ class _EditRecordatorioScreenState extends State<EditRecordatorioScreen> {
 
                 _buildFormField(
                   label: 'Email',
-                  icon: FontAwesomeIcons.envelope,
+                  icon: Icons.mail,
                   controller: _emailController,
                   validator: _validateEmail,
                   keyboardType: TextInputType.emailAddress,
@@ -1230,7 +1335,7 @@ class _EditRecordatorioScreenState extends State<EditRecordatorioScreen> {
                 // Observaciones
                 _buildFormField(
                   label: 'Observaciones',
-                  icon: FontAwesomeIcons.stickyNote,
+                  icon: Icons.note,
                   controller: _observacionesController,
                   validator: (value) => null,
                   maxLines: 3,

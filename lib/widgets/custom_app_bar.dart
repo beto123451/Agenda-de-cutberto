@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../utils/theme.dart';
 
 class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
@@ -48,7 +47,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
 
     if (showBackButton) {
       return IconButton(
-        icon: const Icon(FontAwesomeIcons.arrowLeft),
+        icon: const Icon(Icons.arrow_back),
         onPressed: onBackPressed ?? () => Navigator.of(context).pop(),
         color: AppTheme.primaryColor,
         tooltip: 'Regresar',
@@ -142,7 +141,7 @@ class _SearchAppBarState extends State<SearchAppBar> {
     return AppBar(
       leading: widget.showBackButton
           ? IconButton(
-              icon: const Icon(FontAwesomeIcons.arrowLeft),
+              icon: const Icon(Icons.arrow_back),
               onPressed: () => Navigator.of(context).pop(),
               color: AppTheme.primaryColor,
             )
@@ -167,7 +166,7 @@ class _SearchAppBarState extends State<SearchAppBar> {
       actions: [
         if (!_isSearching)
           IconButton(
-            icon: const Icon(FontAwesomeIcons.search),
+            icon: const Icon(Icons.search),
             onPressed: () {
               setState(() {
                 _isSearching = true;
@@ -177,7 +176,7 @@ class _SearchAppBarState extends State<SearchAppBar> {
           ),
         if (_isSearching)
           IconButton(
-            icon: const Icon(FontAwesomeIcons.times),
+            icon: const Icon(Icons.close),
             onPressed: () {
               setState(() {
                 _isSearching = false;

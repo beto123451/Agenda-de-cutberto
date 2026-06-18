@@ -1,14 +1,10 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-// import 'package:workmanager/workmanager.dart'; // Removido: incompatible
 import 'package:vibration/vibration.dart';
-import 'package:audioplayers/audioplayers.dart';
 import '../models/recordatorio.dart';
 import '../models/alarma_config.dart';
 import 'notification_service.dart';
 import 'storage_service.dart';
-import 'audio_service.dart';
 
 // Callback para cuando se dispara una alarma
 typedef AlarmFireCallback =
@@ -17,10 +13,6 @@ typedef AlarmFireCallback =
 class AlarmService {
   final NotificationService _notificationService;
   final StorageService _storageService;
-  final AudioService _audioService;
-  final AudioPlayer _audioPlayer = AudioPlayer();
-  // final AudioPlayer _notificationAudioPlayer =
-  //     AudioPlayer(); // Para sonido adicional de notificación - COMENTADO: ahora la notificación lo proporciona
   Timer? _alarmTimer;
   bool _alarmaActiva = false;
   int _repeticiones = 0;
@@ -37,13 +29,9 @@ class AlarmService {
   DateTime? _snoozeEndTime;
   static const int snoozeDurationMinutes = 5;
 
-  // MethodChannel para comunicación con Android
-  static const platform = MethodChannel('com.example.agenda_flutter/alarm');
-
   AlarmService()
     : _notificationService = NotificationService(),
-      _storageService = StorageService(),
-      _audioService = AudioService();
+      _storageService = StorageService();
 
   // Registrar callback para cuando se dispara una alarma
   void setAlarmFireCallback(AlarmFireCallback callback) {
@@ -79,22 +67,7 @@ class AlarmService {
 
       debugPrint('✅ Alarma programada para: ${recordatorio.cliente}');
 
-      // PASO 1: Crear alarma en la app Reloj nativa del teléfono
-      // Mostrará: "Servicio: NombreCliente - Equipo"
-      try {
-        await _setNativeAlarm(
-          recordatorio.cliente,
-          recordatorio.equipo,
-          fechaAlarma,
-        );
-        debugPrint('✅ Alarma creada en app Reloj nativa');
-      } catch (e) {
-        debugPrint(
-          '⚠️ Error creando alarma nativa (continuando con notificación): $e',
-        );
-      }
-
-      // PASO 2: Programar notificación local como respaldo
+      // Programar notificación local con sonido y vibración
       await _notificationService.scheduleNotification(
         title: '🚨 Alarma: ${recordatorio.cliente}',
         body: recordatorio.equipo,
@@ -103,6 +76,10 @@ class AlarmService {
         id: recordatorio.id.hashCode,
         payload:
             'alarma|${recordatorio.id}|${recordatorio.cliente}|${recordatorio.equipo}',
+      );
+
+      debugPrint(
+        '✅ Notificación de alarma programada para: ${recordatorio.cliente}',
       );
 
       // Actualizar recordatorio
@@ -118,34 +95,52 @@ class AlarmService {
     }
   }
 
-  // Programar notificación previa (1 día antes)
+  // Programar notificaciones previas (2 días antes y 1 día antes)
   Future<void> programarNotificacionPrevia(Recordatorio recordatorio) async {
     try {
-      final fechaNotificacion = recordatorio.calcularFechaNotificacion();
+      // === NOTIFICACIÓN 2 DÍAS ANTES ===
+      final dia2Antes = recordatorio.fechaProximoMantenimiento.subtract(
+        const Duration(days: 2),
+      );
+      final fecha2DiasAntes = DateTime(
+        dia2Antes.year,
+        dia2Antes.month,
+        dia2Antes.day,
+        18, // 6:00 PM
+        0,
+        0,
+      );
 
-      // Si la fecha ya pasó, no programar
-      if (fechaNotificacion.isBefore(DateTime.now())) {
-        return;
+      if (fecha2DiasAntes.isAfter(DateTime.now())) {
+        await _notificationService.scheduleNotification(
+          title: '🔔 Recordatorio: ${recordatorio.cliente}',
+          body: 'Mantenimiento en 2 días - ${recordatorio.equipo}',
+          scheduleTime: fecha2DiasAntes,
+          channelId: 'recordatorios_channel',
+          id: recordatorio.id.hashCode + 2000,
+          payload: 'recordatorio|${recordatorio.id}|${recordatorio.cliente}',
+        );
+        debugPrint(
+          '✅ Notificación 2 días antes programada: ${recordatorio.cliente}',
+        );
       }
 
-      final delay = fechaNotificacion.difference(DateTime.now());
-      final delaySegundos = delay.inSeconds;
+      // === NOTIFICACIÓN 1 DÍA ANTES ===
+      final fechaNotificacion = recordatorio.calcularFechaNotificacion();
 
-      if (delaySegundos <= 0) return;
-
-      debugPrint(
-        '✅ Notificación previa programada para: ${recordatorio.cliente}',
-      );
-
-      // Programar notificación local (sin workmanager)
-      await _notificationService.scheduleNotification(
-        title: '🔔 Recordatorio: ${recordatorio.cliente}',
-        body: 'Mantenimiento mañana',
-        scheduleTime: fechaNotificacion,
-        channelId: 'recordatorios_channel',
-        id: recordatorio.id.hashCode + 1000,
-        payload: 'recordatorio|${recordatorio.id}|${recordatorio.cliente}',
-      );
+      if (fechaNotificacion.isAfter(DateTime.now())) {
+        await _notificationService.scheduleNotification(
+          title: '🔔 Recordatorio: ${recordatorio.cliente}',
+          body: 'Mantenimiento mañana - ${recordatorio.equipo}',
+          scheduleTime: fechaNotificacion,
+          channelId: 'recordatorios_channel',
+          id: recordatorio.id.hashCode + 1000,
+          payload: 'recordatorio|${recordatorio.id}|${recordatorio.cliente}',
+        );
+        debugPrint(
+          '✅ Notificación 1 día antes programada: ${recordatorio.cliente}',
+        );
+      }
 
       final recordatorioActualizado = recordatorio.copyWith(
         notificacionProgramada: true,
@@ -166,14 +161,19 @@ class AlarmService {
       await _notificationService.cancelNotification(
         recordatorio.id.hashCode + 1000,
       );
+      await _notificationService.cancelNotification(
+        recordatorio.id.hashCode + 2000,
+      );
 
-      // Eliminar alarma del Reloj nativo
-      try {
-        await _dismissNativeAlarm(recordatorio.cliente, recordatorio.equipo);
-      } catch (e) {
-        debugPrint('⚠️ Error eliminando alarma nativa al cancelar: $e');
-      }
+      debugPrint('✅ Alarmas canceladas para: ${recordatorio.cliente}');
+    } catch (e) {
+      debugPrint('❌ Error cancelando alarma: $e');
+    }
+  }
 
+  // Eliminar alarma del BD después de atenderla
+  Future<void> marcarAlarmaAtendida(Recordatorio recordatorio) async {
+    try {
       final recordatorioActualizado = recordatorio.copyWith(
         alarmaProgramada: false,
         fechaAlarma: null,
@@ -183,9 +183,9 @@ class AlarmService {
 
       await _storageService.actualizarRecordatorio(recordatorioActualizado);
 
-      debugPrint('✅ Alarmas canceladas para: ${recordatorio.cliente}');
+      debugPrint('✅ Alarma marcada como atendida: ${recordatorio.cliente}');
     } catch (e) {
-      debugPrint('❌ Error cancelando alarma: $e');
+      debugPrint('❌ Error marcando alarma como atendida: $e');
     }
   }
 
@@ -200,8 +200,7 @@ class AlarmService {
   }) async {
     debugPrint('');
     debugPrint('╔════════════════════════════════════════╗');
-    debugPrint('║ 🚨 ACTIVANDO ALARMA NATIVA ║');
-    debugPrint('╚════════════════════════════════════════╝');
+    debugPrint('║ 🚨 ACTIVANDO ALARMA');
 
     if (_alarmaActiva) {
       debugPrint('⚠️ Alarma ya activa, deteniendo anterior...');
@@ -209,11 +208,9 @@ class AlarmService {
     }
 
     _alarmaActiva = true;
-    _clienteActivo = cliente;
-    _equipoActivo = equipo;
 
     // PASO 1: Mostrar notificación en Flutter como recordatorio
-    debugPrint('▼ PASO 1: Mostrar notificación como recordatorio');
+    debugPrint('▼ PASO 1: Mostrar notificación completa de alarma');
     try {
       await _notificationService.showFullScreenAlarm(
         cliente: cliente,
@@ -226,17 +223,8 @@ class AlarmService {
       debugPrint('⚠️ Error en notificación: $e');
     }
 
-    // PASO 2: Crear alarma nativa del sistema
-    debugPrint('▼ PASO 2: Crear alarma nativa en app Alarmas');
-    try {
-      await _setNativeAlarm(cliente, equipo, fechaAlarma);
-      debugPrint('✅ Alarma nativa creada');
-    } catch (e) {
-      debugPrint('❌ Error creando alarma nativa: $e');
-    }
-
-    // PASO 3: Ejecutar callback si está registrado
-    debugPrint('▼ PASO 3: Ejecutar callback');
+    // PASO 2: Ejecutar callback si está registrado
+    debugPrint('▼ PASO 2: Ejecutar callback');
     if (_alarmFireCallback != null) {
       _alarmFireCallback!(cliente, equipo, fecha);
       debugPrint('✅ Callback de alarma ejecutado');
@@ -244,65 +232,9 @@ class AlarmService {
       debugPrint('⚠️ No hay callback registrado');
     }
 
-    debugPrint('✅ ALARMA NATIVA PROGRAMADA CORRECTAMENTE');
+    debugPrint('✅ ALARMA PROGRAMADA CORRECTAMENTE');
     debugPrint('');
   }
-
-  // Crear alarma directamente en la app Reloj nativa del teléfono
-  // El label mostrará: "Servicio: NombreCliente - Equipo"
-  Future<void> _setNativeAlarm(
-    String cliente,
-    String equipo,
-    DateTime? fechaAlarma,
-  ) async {
-    try {
-      int hora = 0;
-      int minuto = 0;
-
-      if (fechaAlarma != null) {
-        hora = fechaAlarma.hour;
-        minuto = fechaAlarma.minute;
-        debugPrint(
-          '📅 Hora de alarma nativa: $hora:${minuto.toString().padLeft(2, '0')}',
-        );
-      }
-
-      final result = await platform.invokeMethod('setNativeAlarm', {
-        'cliente': cliente,
-        'equipo': equipo,
-        'hora': hora,
-        'minuto': minuto,
-      });
-      debugPrint(
-        '✅ Alarma nativa creada en Reloj: Servicio: $cliente - $equipo',
-      );
-    } catch (e) {
-      debugPrint('❌ Error creando alarma nativa: $e');
-      rethrow;
-    }
-  }
-
-  // Eliminar alarma de la app Reloj nativa del teléfono
-  // Se busca por label "Servicio: NombreCliente - Equipo" y se elimina
-  Future<void> _dismissNativeAlarm(String cliente, String equipo) async {
-    try {
-      final result = await platform.invokeMethod('dismissNativeAlarm', {
-        'cliente': cliente,
-        'equipo': equipo,
-      });
-      debugPrint(
-        '✅ Alarma nativa eliminada del Reloj: Servicio: $cliente - $equipo',
-      );
-    } catch (e) {
-      debugPrint(
-        '⚠️ Error eliminando alarma nativa (puede que ya no exista): $e',
-      );
-    }
-  }
-
-  // Nombre del cliente/equipo de la alarma activa (para poder eliminarla del nativo)
-  String? _clienteActivo;
-  String? _equipoActivo;
 
   // Detener alarma activa
   Future<void> detenerAlarma() async {
@@ -321,22 +253,6 @@ class AlarmService {
         debugPrint('ℹ️ No había timer activo');
       }
 
-      // Detener sonido
-      try {
-        await _audioPlayer.stop();
-        debugPrint('✅ AudioPlayer detenido');
-      } catch (e) {
-        debugPrint('⚠️ Error deteniendo AudioPlayer: $e');
-      }
-
-      // Detener sonido de notificación - COMENTADO: ahora viene de la notificación directamente
-      // try {
-      //   await _notificationAudioPlayer.stop();
-      //   debugPrint('✅ Sonido de notificación detenido');
-      // } catch (e) {
-      //   debugPrint('⚠️ Error deteniendo sonido de notificación: $e');
-      // }
-
       // Detener vibración
       try {
         await Vibration.cancel();
@@ -345,32 +261,12 @@ class AlarmService {
         debugPrint('⚠️ Error cancelando vibración: $e');
       }
 
-      // Detener audio en AudioService
-      try {
-        await _audioService.stopSound();
-        debugPrint('✅ AudioService detenido');
-      } catch (e) {
-        debugPrint('⚠️ Error deteniendo AudioService: $e');
-      }
-
       // Cancelar notificación
       try {
         await _notificationService.cancelAllNotifications();
         debugPrint('✅ Notificaciones canceladas');
       } catch (e) {
         debugPrint('⚠️ Error cancelando notificaciones: $e');
-      }
-
-      // Eliminar alarma del Reloj nativo
-      if (_clienteActivo != null && _equipoActivo != null) {
-        try {
-          await _dismissNativeAlarm(_clienteActivo!, _equipoActivo!);
-          debugPrint('✅ Alarma nativa eliminada del Reloj');
-        } catch (e) {
-          debugPrint('⚠️ Error eliminando alarma nativa: $e');
-        }
-        _clienteActivo = null;
-        _equipoActivo = null;
       }
 
       _alarmaActiva = false;
@@ -552,10 +448,9 @@ class AlarmService {
   }
 
   // Limpiar recursos
-  Future<void> dispose() async {
+  void dispose() {
     _alarmTimer?.cancel();
     _snoozeTicker?.cancel();
     snoozeSecondsLeft.dispose();
-    await _audioPlayer.dispose();
   }
 }
